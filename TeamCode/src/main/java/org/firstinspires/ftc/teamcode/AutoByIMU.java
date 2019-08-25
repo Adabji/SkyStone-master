@@ -76,6 +76,8 @@ public class AutoByIMU extends LinearOpMode {
 
         while(opModeIsActive()) {
             moveToLoc(90, 500, 1);
+            moveToLoc(45, 500, 1);
+            moveToLoc(-90, 500, 1);
         }
     }
 
