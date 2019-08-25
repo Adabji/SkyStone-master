@@ -18,7 +18,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.Velocity;
 
 import java.util.Locale;
 
-@com.qualcomm.robotcore.eventloop.opmode.TeleOp(name = "AutoByIMU", group = "Autonomous")
+@com.qualcomm.robotcore.eventloop.opmode.Autonomous(name = "AutoByIMU", group = "Autonomous")
 public class AutoByIMU extends LinearOpMode {
 
     private static DcMotor leftFrontWheel;
