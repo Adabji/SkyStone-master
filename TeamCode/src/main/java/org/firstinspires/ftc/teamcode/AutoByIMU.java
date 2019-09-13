@@ -32,6 +32,7 @@ public class AutoByIMU extends LinearOpMode {
     private BNO055IMU imu;
     private double correction, globalAngle;
     private Orientation angles;
+    private int rotateTolerance = 5;
 
     Orientation lastAngles = new Orientation();
 
@@ -76,50 +77,38 @@ public class AutoByIMU extends LinearOpMode {
         sleep(1000);
 
         while(opModeIsActive()) {
-            moveToLoc(90, 500, 1);
-            moveToLoc(45, 500, 1);
-            moveToLoc(-90, 500, 1);
+            moveToLoc(90, 500, 0.1);
+            telemetry.addData("Heading:",getAbsoluteHeading());
         }
     }
 
-    private void moveToLoc(int deg, int distance, int power) {
-        rotate(deg, power);
-        move(distance, power);
+    private void moveToLoc(int head, int distance, double power) {
+        rotate(head, power);
+        // move(distance, power);
     }
 
-    /**
-     * Rotate left or right the number of degrees. Does not support turning more than 180 degrees.
-     * @param degrees Degrees to turn, + is left - is right
-     */
-    private void rotate(int degrees, double power)
+    private void rotate(int head, double power)
     {
-        double  leftPower, rightPower;
+        telemetry.addData("Rotating...", head);
+        telemetry.update();
 
-        // restart imu movement tracking.
-        resetAngle();
-
-        // getAngle() returns + when rotating counter clockwise (left) and - when rotating
-        // clockwise (right).
-
-        if (degrees < 0)
-        {   // turn right.
-            leftPower = power;
-            rightPower = -power;
-        }
-        else if (degrees > 0)
-        {   // turn left.
-            leftPower = -power;
-            rightPower = power;
-        }
+        double leftPower, rightPower;
+        double rotateAngle;
+        if(getAbsoluteHeading() < 0) rotateAngle = Math.abs(getAbsoluteHeading());
+        else if(getAbsoluteHeading() > 0) rotateAngle = getAbsoluteHeading() + 180;
         else return;
 
-        // set power to rotate.
-        leftFrontWheel.setPower(leftPower);
-        leftBackWheel.setPower(leftPower);
-        rightFrontWheel.setPower(rightPower);
-        rightBackWheel.setPower(rightPower);
+        // Resume working here.
 
-        // rotate until turn is completed.
+
+
+        // set power to rotate.
+        leftFrontWheel.setPower(power);
+        leftBackWheel.setPower(power);
+        rightFrontWheel.setPower(power);
+        rightBackWheel.setPower(power);
+
+        /* rotate until turn is completed.
         if (degrees < 0)
         {
             // On right turn we have to get off zero first.
@@ -128,24 +117,29 @@ public class AutoByIMU extends LinearOpMode {
             while (opModeIsActive() && getAngle() > degrees) {}
         }
         else    // left turn.
-            while (opModeIsActive() && getAngle() < degrees) {}
+            while (opModeIsActive() && getAngle() < degrees) {}*/
 
-        // turn the motors off.
-        leftFrontWheel.setPower(0);
-        leftBackWheel.setPower(0);
-        rightFrontWheel.setPower(0);
-        rightBackWheel.setPower(0);
+        if(getAbsoluteHeading() >  head - rotateTolerance && getAbsoluteHeading() < head + rotateTolerance){
+            // turn the motors off.
+            telemetry.addData("Motor stopping", "stopping");
+            telemetry.update();
+            leftFrontWheel.setPower(0);
+            leftBackWheel.setPower(0);
+            rightFrontWheel.setPower(0);
+            rightBackWheel.setPower(0);
+        }
 
         // wait for rotation to stop.
         sleep(1000);
 
         // reset angle tracking on new heading.
-        resetAngle();
+        // resetAngle();
     }
 
-    private void move(int distance, int power) {
+    private void move(int distance, double power) {
 
-        correction = checkDirection();
+        telemetry.addData("moving", distance);
+        // correction = checkDirection();
 
         leftFrontWheel.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         leftBackWheel.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
@@ -154,18 +148,18 @@ public class AutoByIMU extends LinearOpMode {
 
         leftFrontWheel.setTargetPosition(distance);
         leftBackWheel.setTargetPosition(distance);
-        rightFrontWheel.setTargetPosition(-distance);
-        rightBackWheel.setTargetPosition(-distance);
+        rightFrontWheel.setTargetPosition(distance);
+        rightBackWheel.setTargetPosition(distance);
 
         leftFrontWheel.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         leftBackWheel.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         rightFrontWheel.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         rightBackWheel.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
-        leftFrontWheel.setPower(power - correction);
-        leftBackWheel.setPower(power - correction);
-        rightFrontWheel.setPower(power + correction);
-        rightBackWheel.setPower(power + correction);
+        leftFrontWheel.setPower(power);
+        leftBackWheel.setPower(power);
+        rightFrontWheel.setPower(power);
+        rightBackWheel.setPower(power);
 
         while (leftFrontWheel.isBusy() && leftBackWheel.isBusy() && rightFrontWheel.isBusy() && rightBackWheel.isBusy()){ }
 
@@ -180,24 +174,6 @@ public class AutoByIMU extends LinearOpMode {
         rightBackWheel.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
     }
 
-    private double checkDirection(){
-        // The gain value determines how sensitive the correction is to direction changes.
-        // You will have to experiment with your robot to get small smooth direction changes
-        // to stay on a straight line.
-        double correction, angle, gain = .10;
-
-        angle = getAngle();
-
-        if (angle == 0)
-            correction = 0;             // no adjustment.
-        else
-            correction = -angle;        // reverse sign of angle for correction.
-
-        correction = correction * gain;
-
-        return correction;
-    }
-
     public double getAbsoluteHeading() {
         angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
         return formatAngle(angles.angleUnit, angles.firstAngle);
@@ -209,40 +185,6 @@ public class AutoByIMU extends LinearOpMode {
 
     private String formatDegrees(double degrees){
         return String.format(Locale.getDefault(), "%.1f", AngleUnit.DEGREES.normalize(degrees));
-    }
-
-    /**
-     * Get current cumulative angle rotation from last reset.
-     * @return Angle in degrees. + = left, - = right.
-     */
-    private double getAngle()
-    {
-        // We experimentally determined the Z axis is the axis we want to use for heading angle.
-        // We have to process the angle because the imu works in euler angles so the Z axis is
-        // returned as 0 to +180 or 0 to -180 rolling back to -179 or +179 when rotation passes
-        // 180 degrees. We detect this transition and track the total cumulative angle of rotation.
-
-        Orientation angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
-
-        double deltaAngle = angles.firstAngle - lastAngles.firstAngle;
-
-        if (deltaAngle < -180)
-            deltaAngle += 360;
-        else if (deltaAngle > 180)
-            deltaAngle -= 360;
-
-        globalAngle += deltaAngle;
-
-        lastAngles = angles;
-
-        return globalAngle;
-    }
-
-    private void resetAngle()
-    {
-        lastAngles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
-
-        globalAngle = 0;
     }
 
 }

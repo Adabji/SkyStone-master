@@ -32,8 +32,9 @@ public class TestIMUAuto extends LinearOpMode {
     private BNO055IMU imu;
     private double correction, globalAngle;
     private Orientation angles;
+    private double curHeading;
 
-    Orientation lastAngles = new Orientation();
+    // Orientation lastAngles = new Orientation();
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -46,10 +47,14 @@ public class TestIMUAuto extends LinearOpMode {
         leftFrontWheel.setDirection(DcMotorSimple.Direction.REVERSE);
         leftBackWheel.setDirection(DcMotorSimple.Direction.REVERSE);
 
-        leftFrontWheel.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        leftBackWheel.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        rightFrontWheel.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        rightBackWheel.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        leftFrontWheel.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        leftBackWheel.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
+        leftFrontWheel.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        leftBackWheel.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+
+        rightFrontWheel.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        rightBackWheel.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
         BNO055IMU.Parameters parameters = new BNO055IMU.Parameters();
         parameters.angleUnit           = BNO055IMU.AngleUnit.DEGREES;
@@ -81,7 +86,10 @@ public class TestIMUAuto extends LinearOpMode {
         sleep(1000);
 
         if(opModeIsActive()) {
-            moveToLoc(90, 500, 90, 0.1, 1);
+            // moveToLoc(90, 500, -90, 0.1, 1);
+            move(1000, 2);
+            move(-1000,1);
+            move(500, 0.5);
             // moveToLoc(45, 300, 45, 0.5, 2);
             // moveToLoc(-90, 500, 60, 0.8, 1);
         }
@@ -94,23 +102,22 @@ public class TestIMUAuto extends LinearOpMode {
     }
 
     private void head(int heading, double rPower) {
-        telemetry.addData("Current Heading: ", getAbsoluteHeading());
-        telemetry.update();
-
         double leftPower, rightPower;
 
         if(heading < getAbsoluteHeading()) {
             // to turn right
             telemetry.addData("turning right: ", heading);
-            telemetry.update();
-            leftPower = rPower;
-            rightPower = -rPower;
-        } else if(heading > getAbsoluteHeading()) {
-            // to turn left
-            telemetry.addData("turning left: ", heading);
+            telemetry.addData("current heading: ", getAbsoluteHeading());
             telemetry.update();
             leftPower = -rPower;
             rightPower = rPower;
+        } else if(heading > getAbsoluteHeading()) {
+            // to turn left
+            telemetry.addData("turning left: ", heading);
+            telemetry.addData("current heading: ", getAbsoluteHeading());
+            telemetry.update();
+            leftPower = rPower;
+            rightPower = -rPower;
         } else return;
 
         // set power to rotate.
@@ -172,6 +179,12 @@ public class TestIMUAuto extends LinearOpMode {
         rightFrontWheel.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
         rightBackWheel.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
     }
+
+    /*private void checkOrientation() {
+        angles = this.imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
+        this.imu.getPosition();
+        curHeading = angles.firstAngle;
+    }*/
 
     /*private void moveToLoc(int deg, int distance, int power) {
         rotate(deg, power);
@@ -293,6 +306,7 @@ public class TestIMUAuto extends LinearOpMode {
 
     public double getAbsoluteHeading() {
         angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
+        // return angles.firstAngle;
         return formatAngle(angles.angleUnit, angles.firstAngle);
     }
 
