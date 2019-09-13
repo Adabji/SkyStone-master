@@ -12,6 +12,7 @@ import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.TouchSensor;
 
@@ -22,36 +23,41 @@ import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
 import org.firstinspires.ftc.robotcore.external.navigation.Position;
 import org.firstinspires.ftc.robotcore.external.navigation.Velocity;
 
-@Autonomous(name="Drive Avoid Imu", group="Autonomous")
+@Autonomous(name="Autonomous Building", group="Autonomous")
 //@Disabled
-public class DriveAvoidImu extends LinearOpMode
-{
+public class AutonomousBuilding extends LinearOpMode {
     DcMotor                 leftFront, leftBack, rightFront, rightBack;
     TouchSensor             touch;
     BNO055IMU               imu;
     Orientation             lastAngles = new Orientation();
     double                  globalAngle, power = .30, correction;
+    double                  rotationPower = 0.5;
+    double                  movePower = 0.7;
     boolean                 aButton, bButton, touched;
 
     // called when init button is  pressed.
     @Override
-    public void runOpMode() throws InterruptedException
-    {
+    public void runOpMode() throws InterruptedException {
         leftFront = hardwareMap.dcMotor.get("left front");
         leftBack = hardwareMap.dcMotor.get("left back");
         rightFront = hardwareMap.dcMotor.get("right front");
         rightBack = hardwareMap.dcMotor.get("right back");
 
-        //leftFront.setDirection(DcMotor.Direction.REVERSE);
-        //leftBack.setDirection(DcMotor.Direction.REVERSE);
+        leftFront.setDirection(DcMotor.Direction.REVERSE);
+        leftBack.setDirection(DcMotor.Direction.REVERSE);
 
         leftFront.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         leftBack.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         rightFront.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         rightBack.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
-        // get a reference to touch sensor.
-        // touch = hardwareMap.touchSensor.get("touch_sensor");
+
+        // Change from encoders to ultrasonic sensor when available
+
+        leftFront.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        leftBack.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        rightFront.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        rightBack.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
         BNO055IMU.Parameters parameters = new BNO055IMU.Parameters();
 
@@ -71,8 +77,7 @@ public class DriveAvoidImu extends LinearOpMode
         telemetry.update();
 
         // make sure the imu gyro is calibrated before continuing.
-        while (!isStopRequested() && !imu.isGyroCalibrated())
-        {
+        while (!isStopRequested() && !imu.isGyroCalibrated()) {
             sleep(50);
             idle();
         }
@@ -90,53 +95,25 @@ public class DriveAvoidImu extends LinearOpMode
 
         sleep(1000);
 
-        // drive until end of period.
-
-        while (opModeIsActive())
-        {
+        if (opModeIsActive()) {
             // Use gyro to drive in a straight line.
             correction = checkDirection();
 
-            telemetry.addData("1 imu heading", lastAngles.firstAngle);
-            telemetry.addData("2 global heading", globalAngle);
-            telemetry.addData("3 correction", correction);
+            telemetry.addData("1. imu heading", lastAngles.firstAngle);
+            telemetry.addData("2. global heading", globalAngle);
+            telemetry.addData("3. correction", correction);
             telemetry.update();
 
-            leftFront.setPower(power - correction);
+            /*leftFront.setPower(power - correction);
             leftBack.setPower(power - correction);
             rightFront.setPower(power + correction);
-            rightBack.setPower(power + correction);
+            rightBack.setPower(power + correction);*/
 
             // We record the sensor values because we will test them in more than
             // one place with time passing between those places. See the lesson on
             // Timing Considerations to know why.
 
-            aButton = gamepad1.a;
-            bButton = gamepad1.b;
-            // touched = touch.isPressed();
-
-            if (/*touched || */aButton || bButton)
-            {
-                // backup.
-                leftFront.setPower(power);
-                leftBack.setPower(power);
-                rightFront.setPower(power);
-                rightBack.setPower(power);
-
-                sleep(500);
-
-                // stop.
-                leftFront.setPower(0);
-                leftBack.setPower(0);
-                rightFront.setPower(0);
-                rightBack.setPower(0);
-
-                // turn 90 degrees right.
-                if (/*touched || */aButton) rotate(-90, power);
-
-                // turn 90 degrees left.
-                if (bButton) rotate(90, power);
-            }
+            moveToLocation(500, true, 1000, true);
         }
 
         // turn the motors off.
@@ -146,11 +123,94 @@ public class DriveAvoidImu extends LinearOpMode
         leftBack.setPower(0);
     }
 
+    private void moveToLocation(int strafeDist, boolean strafeDirection, int moveDistance, boolean moveDirection) {
+        strafe(strafeDist, movePower, strafeDirection);
+        move(moveDistance, movePower, moveDirection);
+    }
+
+    // set direction to true if strafing right, false if strafing left
+    private void strafe(int distance, double power, boolean direction) {
+        leftFront.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        leftBack.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        rightFront.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        rightBack.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
+        leftFront.setTargetPosition(distance);
+        leftBack.setTargetPosition(distance);
+        rightFront.setTargetPosition(distance);
+        rightBack.setTargetPosition(distance);
+
+        leftFront.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        leftBack.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        rightFront.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        rightBack.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+
+        double myPower;
+
+        if(direction) myPower = power;
+        else myPower = -power;
+
+        leftFront.setPower(-myPower);
+        leftBack.setPower(myPower);
+        rightFront.setPower(myPower);
+        rightBack.setPower(-myPower);
+
+        while(leftFront.isBusy() && leftBack.isBusy() && rightFront.isBusy() && rightFront.isBusy()) { }
+
+        leftFront.setPower(0);
+        leftBack.setPower(0);
+        rightFront.setPower(0);
+        rightBack.setPower(0);
+
+        leftFront.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
+        leftBack.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
+        rightFront.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
+        rightBack.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
+    }
+
+    private void move(int distance, double power, boolean direction) {
+        leftFront.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        leftBack.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        rightFront.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        rightBack.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
+        leftFront.setTargetPosition(distance);
+        leftBack.setTargetPosition(distance);
+        rightFront.setTargetPosition(distance);
+        rightBack.setTargetPosition(distance);
+
+        leftFront.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        leftBack.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        rightFront.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        rightBack.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+
+        double myPower;
+
+        if(direction) myPower = power;
+        else myPower = -power;
+
+        leftFront.setPower(myPower);
+        leftBack.setPower(myPower);
+        rightFront.setPower(myPower);
+        rightBack.setPower(myPower);
+
+        while(leftFront.isBusy() && leftBack.isBusy() && rightFront.isBusy() && rightFront.isBusy()) { }
+
+        leftFront.setPower(0);
+        leftBack.setPower(0);
+        rightFront.setPower(0);
+        rightBack.setPower(0);
+
+        leftFront.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
+        leftBack.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
+        rightFront.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
+        rightBack.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
+    }
+
     /**
      * Resets the cumulative angle tracking to zero.
      */
-    private void resetAngle()
-    {
+    private void resetAngle() {
         lastAngles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
 
         globalAngle = 0;
@@ -160,8 +220,7 @@ public class DriveAvoidImu extends LinearOpMode
      * Get current cumulative angle rotation from last reset.
      * @return Angle in degrees. + = left, - = right.
      */
-    private double getAngle()
-    {
+    private double getAngle() {
         // We experimentally determined the Z axis is the axis we want to use for heading angle.
         // We have to process the angle because the imu works in euler angles so the Z axis is
         // returned as 0 to +180 or 0 to -180 rolling back to -179 or +179 when rotation passes
@@ -187,8 +246,7 @@ public class DriveAvoidImu extends LinearOpMode
      * See if we are moving in a straight line and if not return a power correction value.
      * @return Power adjustment, + is adjust left - is adjust right.
      */
-    private double checkDirection()
-    {
+    private double checkDirection() {
         // The gain value determines how sensitive the correction is to direction changes.
         // You will have to experiment with your robot to get small smooth direction changes
         // to stay on a straight line.
@@ -201,7 +259,7 @@ public class DriveAvoidImu extends LinearOpMode
         else
             correction = -angle;        // reverse sign of angle for correction.
 
-        correction = correction * gain;
+        correction *= gain;
 
         return correction;
     }
@@ -210,8 +268,7 @@ public class DriveAvoidImu extends LinearOpMode
      * Rotate left or right the number of degrees. Does not support turning more than 180 degrees.
      * @param degrees Degrees to turn, + is left - is right
      */
-    private void rotate(int degrees, double power)
-    {
+    private void rotate(int degrees, double power) {
         double  leftPower, rightPower;
 
         // restart imu movement tracking.
