@@ -43,8 +43,8 @@ public class AutonomousBuilding extends LinearOpMode {
         rightFront = hardwareMap.dcMotor.get("right front");
         rightBack = hardwareMap.dcMotor.get("right back");
 
-        leftFront.setDirection(DcMotor.Direction.REVERSE);
-        leftBack.setDirection(DcMotor.Direction.REVERSE);
+        rightFront.setDirection(DcMotor.Direction.REVERSE);
+        rightBack.setDirection(DcMotor.Direction.REVERSE);
 
         leftFront.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         leftBack.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
@@ -58,6 +58,11 @@ public class AutonomousBuilding extends LinearOpMode {
         leftBack.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         rightFront.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         rightBack.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+
+        leftFront.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
+        leftBack.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
+        rightFront.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
+        rightBack.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
 
         BNO055IMU.Parameters parameters = new BNO055IMU.Parameters();
 
@@ -113,14 +118,14 @@ public class AutonomousBuilding extends LinearOpMode {
             // one place with time passing between those places. See the lesson on
             // Timing Considerations to know why.
 
-            moveToLocation(500, true, 1000, true);
+            moveToLocation(0, true, 1000, true);
         }
 
         // turn the motors off.
-        rightFront.setPower(0);
+        /*rightFront.setPower(0);
         rightBack.setPower(0);
         leftFront.setPower(0);
-        leftBack.setPower(0);
+        leftBack.setPower(0);*/
     }
 
     private void moveToLocation(int strafeDist, boolean strafeDirection, int moveDistance, boolean moveDirection) {
@@ -130,45 +135,7 @@ public class AutonomousBuilding extends LinearOpMode {
 
     // set direction to true if strafing right, false if strafing left
     private void strafe(int distance, double power, boolean direction) {
-        leftFront.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        leftBack.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        rightFront.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        rightBack.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-
-        leftFront.setTargetPosition(distance);
-        leftBack.setTargetPosition(distance);
-        rightFront.setTargetPosition(distance);
-        rightBack.setTargetPosition(distance);
-
-        leftFront.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        leftBack.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        rightFront.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        rightBack.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-
-        double myPower;
-
-        if(direction) myPower = power;
-        else myPower = -power;
-
-        leftFront.setPower(-myPower);
-        leftBack.setPower(myPower);
-        rightFront.setPower(myPower);
-        rightBack.setPower(-myPower);
-
-        while(leftFront.isBusy() && leftBack.isBusy() && rightFront.isBusy() && rightFront.isBusy()) { }
-
-        leftFront.setPower(0);
-        leftBack.setPower(0);
-        rightFront.setPower(0);
-        rightBack.setPower(0);
-
-        leftFront.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
-        leftBack.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
-        rightFront.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
-        rightBack.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
-    }
-
-    private void move(int distance, double power, boolean direction) {
+        if(distance == 0) return;
         leftFront.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         leftBack.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         rightFront.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
@@ -190,16 +157,70 @@ public class AutonomousBuilding extends LinearOpMode {
         else myPower = -power;
 
         leftFront.setPower(myPower);
-        leftBack.setPower(myPower);
-        rightFront.setPower(myPower);
+        leftBack.setPower(-myPower);
+        rightFront.setPower(-myPower);
         rightBack.setPower(myPower);
 
-        while(leftFront.isBusy() && leftBack.isBusy() && rightFront.isBusy() && rightFront.isBusy()) { }
+        while(leftFront.isBusy() && leftBack.isBusy() && rightFront.isBusy() && rightBack.isBusy()) { }
 
         leftFront.setPower(0);
         leftBack.setPower(0);
         rightFront.setPower(0);
         rightBack.setPower(0);
+
+        leftFront.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
+        leftBack.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
+        rightFront.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
+        rightBack.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
+    }
+
+    private void move(int distance, double power, boolean direction) {
+        if(distance == 0) return;
+        rightFront.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        rightBack.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        leftFront.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        leftBack.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
+
+        leftFront.setTargetPosition(distance);
+        leftBack.setTargetPosition(distance);
+        rightFront.setTargetPosition(distance);
+        rightBack.setTargetPosition(distance);
+
+        rightFront.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        rightBack.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        leftFront.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        leftBack.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+
+
+        double myPower;
+
+        if(direction) myPower = power;
+        else myPower = -power;
+
+        leftFront.setPower(myPower);
+        telemetry.addData("leftfrontpower", myPower);
+        leftBack.setPower(myPower);
+        telemetry.addData("leftbackpower", myPower);
+        rightFront.setPower(myPower);
+        telemetry.addData("rightfrontpower", myPower);
+        rightBack.setPower(myPower);
+        telemetry.addData("rightbackpower", myPower);
+        telemetry.update();
+
+
+        while(rightBack.isBusy() && rightFront.isBusy() && leftFront.isBusy() && leftBack.isBusy()) { }
+
+        // telemetry additions
+        leftFront.setPower(0);
+        telemetry.addData("Stopping:", "leftFront");
+        leftBack.setPower(0);
+        telemetry.addData("Stopping:", "leftBack");
+        rightFront.setPower(0);
+        telemetry.addData("Stopping:", "rightFront");
+        rightBack.setPower(0);
+        telemetry.addData("Stopping:", "rightBack");
+        telemetry.update();
 
         leftFront.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
         leftBack.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
