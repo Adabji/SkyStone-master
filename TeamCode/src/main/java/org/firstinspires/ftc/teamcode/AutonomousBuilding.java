@@ -27,13 +27,16 @@ import org.firstinspires.ftc.robotcore.external.navigation.Velocity;
 //@Disabled
 public class AutonomousBuilding extends LinearOpMode {
     DcMotor                 leftFront, leftBack, rightFront, rightBack;
-    TouchSensor             touch;
     BNO055IMU               imu;
     Orientation             lastAngles = new Orientation();
     double                  globalAngle, power = .30, correction;
     double                  rotationPower = 0.5;
     double                  movePower = 0.7;
-    boolean                 aButton, bButton, touched;
+    static final double     COUNTS_PER_MOTOR_REV  = 537.6;
+    static final double     DRIVE_GEAR_REDUCTION  = 1.0;
+    static final double     WHELL_DIAMETER_INCHES = 3.937;
+    static final double     COUNTS_PER_INCH       = (COUNTS_PER_MOTOR_REV * DRIVE_GEAR_REDUCTION) /
+                                                    (WHELL_DIAMETER_INCHES * 3.1415);
 
     // called when init button is  pressed.
     @Override
@@ -118,7 +121,9 @@ public class AutonomousBuilding extends LinearOpMode {
             // one place with time passing between those places. See the lesson on
             // Timing Considerations to know why.
 
-            moveToLocation(0, true, 1000, true);
+            moveToLocation(45, false, 47, true);
+            moveToLocation(0, true, -45, false);
+            moveToLocation(50, true, 0, true);
         }
 
         // turn the motors off.
@@ -136,15 +141,18 @@ public class AutonomousBuilding extends LinearOpMode {
     // set direction to true if strafing right, false if strafing left
     private void strafe(int distance, double power, boolean direction) {
         if(distance == 0) return;
+
+        int targetPos = (int)(distance * COUNTS_PER_INCH);
+
         leftFront.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         leftBack.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         rightFront.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         rightBack.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
-        leftFront.setTargetPosition(distance);
-        leftBack.setTargetPosition(distance);
-        rightFront.setTargetPosition(distance);
-        rightBack.setTargetPosition(distance);
+        leftFront.setTargetPosition(targetPos);
+        leftBack.setTargetPosition(targetPos);
+        rightFront.setTargetPosition(targetPos);
+        rightBack.setTargetPosition(targetPos);
 
         leftFront.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         leftBack.setMode(DcMotor.RunMode.RUN_TO_POSITION);
@@ -176,22 +184,24 @@ public class AutonomousBuilding extends LinearOpMode {
 
     private void move(int distance, double power, boolean direction) {
         if(distance == 0) return;
+
+        int targetPos = (int)(distance * COUNTS_PER_INCH);
+
         rightFront.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         rightBack.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         leftFront.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         leftBack.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
 
-        leftFront.setTargetPosition(distance);
-        leftBack.setTargetPosition(distance);
-        rightFront.setTargetPosition(distance);
-        rightBack.setTargetPosition(distance);
+        leftFront.setTargetPosition(targetPos);
+        leftBack.setTargetPosition(targetPos);
+        rightFront.setTargetPosition(targetPos);
+        rightBack.setTargetPosition(targetPos);
 
         rightFront.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         rightBack.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         leftFront.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         leftBack.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-
 
         double myPower;
 
