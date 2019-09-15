@@ -13,23 +13,22 @@ import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
-import com.qualcomm.robotcore.hardware.TouchSensor;
+import com.qualcomm.robotcore.hardware.Servo;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
 import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
-import org.firstinspires.ftc.robotcore.external.navigation.Position;
-import org.firstinspires.ftc.robotcore.external.navigation.Velocity;
 
 @Autonomous(name="Autonomous Building", group="Autonomous")
 //@Disabled
 public class AutonomousBuilding extends LinearOpMode {
     DcMotor                 leftFront, leftBack, rightFront, rightBack;
+    Servo                   foundationServo;
     BNO055IMU               imu;
     Orientation             lastAngles = new Orientation();
-    double                  globalAngle, power = .30, correction;
+    PIDController           pidRotate, pidDrive;
+    double                  globalAngle, power = .30, correction, rotation;
     double                  rotationPower = 0.5;
     double                  movePower = 0.7;
     static final double     COUNTS_PER_MOTOR_REV  = 537.6;
@@ -45,6 +44,10 @@ public class AutonomousBuilding extends LinearOpMode {
         leftBack = hardwareMap.dcMotor.get("left back");
         rightFront = hardwareMap.dcMotor.get("right front");
         rightBack = hardwareMap.dcMotor.get("right back");
+
+        foundationServo = hardwareMap.servo.get("foundationServo");
+
+        foundationServo.setPosition(0.25);
 
         rightFront.setDirection(DcMotor.Direction.REVERSE);
         rightBack.setDirection(DcMotor.Direction.REVERSE);
@@ -80,6 +83,15 @@ public class AutonomousBuilding extends LinearOpMode {
         imu = hardwareMap.get(BNO055IMU.class, "imu");
 
         imu.initialize(parameters);
+
+        // Set PID proportional value to start reducing power at about 50 degrees of rotation.
+        // P by itself may stall before turn completed so we add a bit of I (integral) which
+        // causes the PID controller to gently increase power if the turn is not completed.
+        pidRotate = new PIDController(.003, .00003, 0);
+
+        // Set PID proportional value to produce non-zero correction value when robot veers off
+        // straight line. P value controls how sensitive the correction is.
+        pidDrive = new PIDController(.05, 0, 0);
 
         telemetry.addData("Mode", "calibrating...");
         telemetry.update();
@@ -121,9 +133,24 @@ public class AutonomousBuilding extends LinearOpMode {
             // one place with time passing between those places. See the lesson on
             // Timing Considerations to know why.
 
-            moveToLocation(45, false, 47, true);
-            moveToLocation(0, true, -45, false);
-            moveToLocation(50, true, 0, true);
+            // Moving to the foundation, pulling it, and then moving to the line
+            /*move(5, movePower/2, false);
+            foundationServo.setPosition(0.5);
+            strafe(24, movePower, true);
+            move(25, movePower, false);
+            Thread.sleep(300);
+            move(1, movePower/3, false);
+            foundationServo.setPosition(0);
+            Thread.sleep(300);
+            move(27, movePower/1.5, true);
+            foundationServo.setPosition(0.5);
+            Thread.sleep(15000);
+            strafe(48, movePower, false);
+            foundationServo.setPosition(0);*/
+
+            //testing rotation
+            rotate(90, rotationPower);
+            rotate(-180, rotationPower);
         }
 
         // turn the motors off.
@@ -133,36 +160,45 @@ public class AutonomousBuilding extends LinearOpMode {
         leftBack.setPower(0);*/
     }
 
-    private void moveToLocation(int strafeDist, boolean strafeDirection, int moveDistance, boolean moveDirection) {
+    /*private void moveToLocation(int strafeDist, boolean strafeDirection, int moveDistance, boolean moveDirection) {
         strafe(strafeDist, movePower, strafeDirection);
         move(moveDistance, movePower, moveDirection);
-    }
+    }*/
 
     // set direction to true if strafing right, false if strafing left
     private void strafe(int distance, double power, boolean direction) {
         if(distance == 0) return;
 
+        telemetry.addData("strafingdirection:", direction);
+        telemetry.update();
+
         int targetPos = (int)(distance * COUNTS_PER_INCH);
+
+        double myPower;
+        int strafeDistance;
+
+        if(direction) {
+            myPower = power;
+            strafeDistance = targetPos;
+        } else {
+            myPower = -power;
+            strafeDistance = -targetPos;
+        }
 
         leftFront.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         leftBack.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         rightFront.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         rightBack.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
-        leftFront.setTargetPosition(targetPos);
-        leftBack.setTargetPosition(targetPos);
-        rightFront.setTargetPosition(targetPos);
-        rightBack.setTargetPosition(targetPos);
+        leftFront.setTargetPosition(strafeDistance);
+        leftBack.setTargetPosition(-strafeDistance);
+        rightFront.setTargetPosition(-strafeDistance);
+        rightBack.setTargetPosition(strafeDistance);
 
         leftFront.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         leftBack.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         rightFront.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         rightBack.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-
-        double myPower;
-
-        if(direction) myPower = power;
-        else myPower = -power;
 
         leftFront.setPower(myPower);
         leftBack.setPower(-myPower);
@@ -185,52 +221,48 @@ public class AutonomousBuilding extends LinearOpMode {
     private void move(int distance, double power, boolean direction) {
         if(distance == 0) return;
 
+        telemetry.addData("movingdirection:", direction);
+        telemetry.update();
+
         int targetPos = (int)(distance * COUNTS_PER_INCH);
 
-        rightFront.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        rightBack.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        double myPower;
+        int moveDistance;
+
+        if(direction) {
+            myPower = power;
+            moveDistance = targetPos;
+        } else {
+            myPower = -power;
+            moveDistance = -targetPos;
+        }
+
         leftFront.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         leftBack.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        rightFront.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        rightBack.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
+        leftFront.setTargetPosition(moveDistance);
+        leftBack.setTargetPosition(moveDistance);
+        rightFront.setTargetPosition(moveDistance);
+        rightBack.setTargetPosition(moveDistance);
 
-        leftFront.setTargetPosition(targetPos);
-        leftBack.setTargetPosition(targetPos);
-        rightFront.setTargetPosition(targetPos);
-        rightBack.setTargetPosition(targetPos);
-
-        rightFront.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        rightBack.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         leftFront.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         leftBack.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-
-        double myPower;
-
-        if(direction) myPower = power;
-        else myPower = -power;
+        rightFront.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        rightBack.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
         leftFront.setPower(myPower);
-        telemetry.addData("leftfrontpower", myPower);
         leftBack.setPower(myPower);
-        telemetry.addData("leftbackpower", myPower);
         rightFront.setPower(myPower);
-        telemetry.addData("rightfrontpower", myPower);
         rightBack.setPower(myPower);
-        telemetry.addData("rightbackpower", myPower);
-        telemetry.update();
 
+        while(leftFront.isBusy() && leftBack.isBusy() && rightBack.isBusy() && rightFront.isBusy()) { }
 
-        while(rightBack.isBusy() && rightFront.isBusy() && leftFront.isBusy() && leftBack.isBusy()) { }
-
-        // telemetry additions
         leftFront.setPower(0);
-        telemetry.addData("Stopping:", "leftFront");
         leftBack.setPower(0);
-        telemetry.addData("Stopping:", "leftBack");
         rightFront.setPower(0);
-        telemetry.addData("Stopping:", "rightFront");
         rightBack.setPower(0);
-        telemetry.addData("Stopping:", "rightBack");
-        telemetry.update();
 
         leftFront.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
         leftBack.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
@@ -300,10 +332,15 @@ public class AutonomousBuilding extends LinearOpMode {
      * @param degrees Degrees to turn, + is left - is right
      */
     private void rotate(int degrees, double power) {
-        double  leftPower, rightPower;
+        /*double  leftPower, rightPower;
 
         // restart imu movement tracking.
         resetAngle();
+
+        telemetry.addData("imu heading1", globalAngle);
+        telemetry.update();
+
+        Thread.sleep(1000);
 
         // getAngle() returns + when rotating counter clockwise (left) and - when rotating
         // clockwise (right).
@@ -345,6 +382,86 @@ public class AutonomousBuilding extends LinearOpMode {
 
         // wait for rotation to stop.
         sleep(1000);
+        telemetry.addData("imu heading2", globalAngle);
+        telemetry.update();
+
+        Thread.sleep(1000);
+
+        // reset angle tracking on new heading.
+        resetAngle();
+        telemetry.addData("imu heading3", globalAngle);
+        telemetry.update();
+
+        Thread.sleep(1000);*/
+
+        // restart imu angle tracking.
+        resetAngle();
+
+        // if degrees > 359 we cap at 359 with same sign as original degrees.
+        if (Math.abs(degrees) > 359) degrees = (int) Math.copySign(359, degrees);
+
+        // start pid controller. PID controller will monitor the turn angle with respect to the
+        // target angle and reduce power as we approach the target angle. This is to prevent the
+        // robots momentum from overshooting the turn after we turn off the power. The PID controller
+        // reports onTarget() = true when the difference between turn angle and target angle is within
+        // 1% of target (tolerance) which is about 1 degree. This helps prevent overshoot. Overshoot is
+        // dependant on the motor and gearing configuration, starting power, weight of the robot and the
+        // on target tolerance. If the controller overshoots, it will reverse the sign of the output
+        // turning the robot back toward the setpoint value.
+
+        pidRotate.reset();
+        pidRotate.setSetpoint(degrees);
+        pidRotate.setInputRange(0, degrees);
+        pidRotate.setOutputRange(0, power);
+        pidRotate.setTolerance(1);
+        pidRotate.enable();
+
+        // getAngle() returns + when rotating counter clockwise (left) and - when rotating
+        // clockwise (right).
+
+        // rotate until turn is completed.
+
+        if (degrees < 0)
+        {
+            // On right turn we have to get off zero first.
+            while (opModeIsActive() && getAngle() == 0)
+            {
+                leftFront.setPower(power);
+                leftBack.setPower(power);
+                rightFront.setPower(-power);
+                rightBack.setPower(-power);
+                sleep(100);
+            }
+
+            do
+            {
+                power = pidRotate.performPID(getAngle()); // power will be - on right turn.
+                leftFront.setPower(-power);
+                leftBack.setPower(-power);
+                rightFront.setPower(power);
+                rightBack.setPower(power);
+            } while (opModeIsActive() && !pidRotate.onTarget());
+        }
+        else    // left turn.
+            do
+            {
+                power = pidRotate.performPID(getAngle()); // power will be + on left turn.
+                leftFront.setPower(-power);
+                leftBack.setPower(-power);
+                rightFront.setPower(power);
+                rightBack.setPower(power);
+            } while (opModeIsActive() && !pidRotate.onTarget());
+
+        // turn the motors off.
+        leftFront.setPower(0);
+        leftBack.setPower(0);
+        rightFront.setPower(0);
+        rightBack.setPower(0);
+
+        rotation = getAngle();
+
+        // wait for rotation to stop.
+        sleep(500);
 
         // reset angle tracking on new heading.
         resetAngle();

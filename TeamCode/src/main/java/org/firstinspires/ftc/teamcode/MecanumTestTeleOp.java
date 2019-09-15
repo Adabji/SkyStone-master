@@ -7,6 +7,7 @@ package org.firstinspires.ftc.teamcode;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.Servo;
 
 import java.util.Arrays;
 
@@ -25,12 +26,17 @@ public class MecanumTestTeleOp extends OpMode {
     private static DcMotor rightFrontWheel;
     private static DcMotor rightBackWheel;
 
+    private static Servo foundationServo;
+
     @Override
     public void init() {
         leftFrontWheel = hardwareMap.dcMotor.get("left front");
         leftBackWheel = hardwareMap.dcMotor.get("left back");
         rightFrontWheel = hardwareMap.dcMotor.get("right front");
         rightBackWheel = hardwareMap.dcMotor.get("right back");
+
+        foundationServo = hardwareMap.servo.get("foundationServo");
+
         leftFrontWheel.setDirection(DcMotorSimple.Direction.REVERSE);
         leftBackWheel.setDirection(DcMotorSimple.Direction.REVERSE);
     }
@@ -43,6 +49,13 @@ public class MecanumTestTeleOp extends OpMode {
         //the negative signs in front of the gamepad inputs may need to be removed.
 
         driveMecanum(inputY, inputX, inputC);
+
+        if(gamepad1.a) {
+            foundationServo.setPosition(0.25);
+        }
+        if(gamepad1.b) {
+            foundationServo.setPosition(0);
+        }
     }
 
     public static void driveMecanum(double forwards, double horizontal, double turning) {
