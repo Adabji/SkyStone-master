@@ -1,9 +1,8 @@
 /**
- * Autonomous on the blue building site side.
+ * Autonomous on the blue depot side
  *
  * NOTES:
- * - Transfer the rotate() code to Autonomous for Depot side.
- * - Update the code once we have the ultrasonic sensors.
+ *
  */
 
 package org.firstinspires.ftc.teamcode;
@@ -20,9 +19,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
 import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
 
-@Autonomous(name="Autonomous Building", group="Autonomous")
-//@Disabled
-public class AutonomousBuilding extends LinearOpMode {
+public class AutonomousDepot extends LinearOpMode {
     DcMotor                 leftFront, leftBack, rightFront, rightBack;
     Servo                   foundationServo;
     BNO055IMU               imu;
@@ -36,7 +33,6 @@ public class AutonomousBuilding extends LinearOpMode {
     static final double     WHELL_DIAMETER_INCHES = 3.937;
     static final double     COUNTS_PER_INCH       = (COUNTS_PER_MOTOR_REV * DRIVE_GEAR_REDUCTION) /
                                                     (WHELL_DIAMETER_INCHES * 3.1415);
-
 
     // called when init button is  pressed.
     @Override
@@ -134,24 +130,9 @@ public class AutonomousBuilding extends LinearOpMode {
             // one place with time passing between those places. See the lesson on
             // Timing Considerations to know why.
 
-            // Moving to the foundation, pulling it, and then moving to the line
-            move(5, movePower/2, false);
-            foundationServo.setPosition(0.5);
-            strafe(24, movePower, true);
-            move(25, movePower, false);
-            Thread.sleep(300);
-            move(1, movePower/3, false);
-            foundationServo.setPosition(0);
-            Thread.sleep(300);
-            move(27, movePower/1.7, true);  // change this to "when hitting the wall" once we get an ultrasonic sensor
-            foundationServo.setPosition(0.5);
-            Thread.sleep(15000);
-            strafe(20, movePower, false);
-            move(5, movePower, false);
-            foundationServo.setPosition(0);
-            strafe(28, movePower, false);
+            // ===> FLESH OF THE PROGRAM
 
-            //testing rotation
+            // testing rotation
             /*rotate(90, rotationPower);
             rotate(-180, rotationPower);*/
         }
@@ -161,7 +142,7 @@ public class AutonomousBuilding extends LinearOpMode {
     private void strafe(int distance, double power, boolean direction) {
         if(distance == 0) return;
 
-        telemetry.addData("strafing direction", direction);
+        telemetry.addData("strafingdirection:", direction);
         telemetry.update();
 
         int targetPos = (int)(distance * COUNTS_PER_INCH);
@@ -213,7 +194,7 @@ public class AutonomousBuilding extends LinearOpMode {
     private void move(int distance, double power, boolean direction) {
         if(distance == 0) return;
 
-        telemetry.addData("moving direction", direction);
+        telemetry.addData("movingdirection:", direction);
         telemetry.update();
 
         int targetPos = (int)(distance * COUNTS_PER_INCH);
